@@ -30,14 +30,10 @@ interface IVault {
     function initialize(address _factoryOwner, address _vaultOwner) external;
     function deposit(address token, uint256 amount) external;
     function withdraw(address token, uint256 amount) external;
-    function executeStrategy(
-        address targetContract,
-        bytes calldata data,
-        TokenApproval[] calldata approvals
-    ) external;
+    function executeStrategy(address targetContract, bytes calldata data, TokenApproval[] calldata approvals) external;
     function pause() external;
     function unpause() external;
     function getTokenBalance(address token) external view returns (uint256);
     function getFactory() external view returns (address);
     function vaultOwner() external view returns (address);
-} 
+}

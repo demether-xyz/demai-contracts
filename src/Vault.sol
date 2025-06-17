@@ -108,25 +108,21 @@ contract Vault is IVault, Initializable, ReentrancyGuardUpgradeable, OwnableUpgr
      * @param data The call data to execute
      * @param approvals Array of token approvals needed for the call
      */
-    function executeStrategy(
-        address targetContract,
-        bytes calldata data,
-        TokenApproval[] calldata approvals
-    ) external onlyAuthorizedManager nonReentrant whenNotPaused {
+    function executeStrategy(address targetContract, bytes calldata data, TokenApproval[] calldata approvals) external onlyAuthorizedManager nonReentrant whenNotPaused {
         if (targetContract == address(0)) revert ZeroAddress();
 
         // Handle token approvals before executing the call
         for (uint256 i = 0; i < approvals.length; i++) {
             if (approvals[i].token == address(0)) revert ZeroAddress();
             if (approvals[i].amount == 0) continue; // Skip zero approvals
-            
-            IERC20(approvals[i].token).safeApprove(targetContract, approvals[i].amount);
+
+            IERC20(approvals[i].token).forceApprove(targetContract, approvals[i].amount);
             emit TokenApproved(approvals[i].token, targetContract, approvals[i].amount);
         }
 
         // Execute the call to the target contract
         (bool success, ) = targetContract.call(data);
-        
+
         if (!success) {
             revert StrategyExecutionFailed();
         }

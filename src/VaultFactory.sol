@@ -78,7 +78,7 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
      * @param vaultOwner The address that will own the vault (can deposit/withdraw)
      * @return The address of the newly deployed vault
      */
-    function createVault(address vaultOwner) external nonReentrant whenNotPaused returns (address) {
+    function deployVault(address vaultOwner) external nonReentrant whenNotPaused returns (address) {
         if (vaultOwner == address(0)) revert ZeroAddress();
         if (address(beacon) == address(0)) revert BeaconNotSet();
         if (userVault[vaultOwner] != address(0)) revert VaultAlreadyExists();
@@ -106,7 +106,7 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
         allVaults.push(vaultAddress);
 
         emit VaultDeployed(vaultOwner, vaultAddress, allVaults.length - 1);
-        
+
         return vaultAddress;
     }
 
@@ -244,7 +244,7 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
      * @dev Required by UUPSUpgradeable - authorizes upgrades
      * @param newImplementation The new implementation address
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
         // Only owner can authorize upgrades
         if (newImplementation == address(0)) revert ZeroAddress();
     }

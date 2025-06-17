@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import "forge-std/Test.sol";
 import "../src/VaultFactory.sol";
 import "../src/Vault.sol";
+import "../src/interfaces/IVault.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -48,7 +49,7 @@ contract VaultFactoryTest is Test {
         token.mint(user2, 1000 * 10 ** 18);
     }
 
-    function test_InitialState() public {
+    function test_InitialState() public view {
         assertEq(factory.owner(), factoryOwner);
         assertEq(factory.getImplementation(), address(vaultImplementation));
         assertEq(factory.getTotalVaults(), 0);
@@ -128,7 +129,7 @@ contract VaultFactoryTest is Test {
 
         vm.startPrank(user2);
         token.approve(vaultAddress, 100 * 10 ** 18);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token), 100 * 10 ** 18);
         vm.stopPrank();
     }
@@ -145,7 +146,7 @@ contract VaultFactoryTest is Test {
 
         // Try to withdraw as user2
         vm.prank(user2);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.withdraw(address(token), 50 * 10 ** 18);
     }
 
@@ -250,7 +251,7 @@ contract VaultFactoryTest is Test {
         assertTrue(factory.getUserVault(user1) != address(0));
     }
 
-    function test_GetBeaconProxyCreationCode() public {
+    function test_GetBeaconProxyCreationCode() public view {
         bytes memory creationCode = factory.getBeaconProxyCreationCode();
         assertTrue(creationCode.length > 0);
     }

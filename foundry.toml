@@ -24,11 +24,11 @@ remappings = [
     #
     # To remedy this, we'll remap the ds-test and forge-std imports to our own versions
     'ds-test/=node_modules/@layerzerolabs/toolbox-foundry/lib/ds-test',
-    'forge-std/=node_modules/@layerzerolabs/toolbox-foundry/lib/forge-std',
+    'forge-std/=node_modules/@layerzerolabs/toolbox-foundry/lib/forge-std/',
     '@layerzerolabs/=node_modules/@layerzerolabs/',
-    '@openzeppelin/=node_modules/@openzeppelin/',
-    '@openzeppelin-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
     '@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
+    '@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
+    '@openzeppelin/=node_modules/@openzeppelin/',
 ]
 
 [profile.deploy]

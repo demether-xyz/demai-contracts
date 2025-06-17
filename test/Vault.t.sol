@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import "forge-std/Test.sol";
 import "../src/Vault.sol";
 import "../src/VaultFactory.sol";
+import "../src/interfaces/IVault.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -132,7 +133,7 @@ contract VaultTest is Test {
         vault.initialize(factoryOwner, vaultOwner);
     }
 
-    function test_InitialState() public {
+    function test_InitialState() public view {
         // The vault owner should be the factory contract itself, not the factory owner
         assertTrue(vault.owner() != address(0)); // Factory address
         assertEq(vault.vaultOwner(), vaultOwner);
@@ -230,20 +231,20 @@ contract VaultTest is Test {
 
     function test_RevertDepositZeroAddress() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(IVault.ZeroAddress.selector);
         vault.deposit(address(0), 100 * 10 ** 18);
     }
 
     function test_RevertDepositZeroAmount() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(IVault.ZeroAmount.selector);
         vault.deposit(address(token1), 0);
     }
 
     function test_RevertDepositNotVaultOwner() public {
         vm.startPrank(user1);
         token1.approve(address(vault), 100 * 10 ** 18);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token1), 100 * 10 ** 18);
         vm.stopPrank();
     }
@@ -252,7 +253,7 @@ contract VaultTest is Test {
         vm.startPrank(factoryOwner);
         token1.mint(factoryOwner, 100 * 10 ** 18);
         token1.approve(address(vault), 100 * 10 ** 18);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token1), 100 * 10 ** 18);
         vm.stopPrank();
     }
@@ -364,13 +365,13 @@ contract VaultTest is Test {
 
     function test_RevertWithdrawZeroAddress() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(IVault.ZeroAddress.selector);
         vault.withdraw(address(0), 100 * 10 ** 18);
     }
 
     function test_RevertWithdrawZeroAmount() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(IVault.ZeroAmount.selector);
         vault.withdraw(address(token1), 0);
     }
 
@@ -383,7 +384,7 @@ contract VaultTest is Test {
 
         // Try to withdraw as different user
         vm.prank(user1);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.withdraw(address(token1), 50 * 10 ** 18);
     }
 
@@ -396,7 +397,7 @@ contract VaultTest is Test {
         token1.approve(address(vault), depositAmount);
         vault.deposit(address(token1), depositAmount);
 
-        vm.expectRevert(Vault.InsufficientBalance.selector);
+        vm.expectRevert(IVault.InsufficientBalance.selector);
         vault.withdraw(address(token1), withdrawAmount);
         vm.stopPrank();
     }
@@ -420,7 +421,7 @@ contract VaultTest is Test {
 
     function test_RevertWithdrawFromEmptyVault() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.InsufficientBalance.selector);
+        vm.expectRevert(IVault.InsufficientBalance.selector);
         vault.withdraw(address(token1), 1);
     }
 
@@ -706,10 +707,10 @@ contract VaultTest is Test {
         for (uint i = 0; i < nonOwners.length; i++) {
             vm.startPrank(nonOwners[i]);
 
-            vm.expectRevert(Vault.OnlyVaultOwner.selector);
+            vm.expectRevert(IVault.OnlyVaultOwner.selector);
             vault.deposit(address(token1), 1);
 
-            vm.expectRevert(Vault.OnlyVaultOwner.selector);
+            vm.expectRevert(IVault.OnlyVaultOwner.selector);
             vault.withdraw(address(token1), 1);
 
             vm.stopPrank();
@@ -724,7 +725,7 @@ contract VaultTest is Test {
         testFactory.unpauseVault(address(vault));
         assertFalse(vault.paused());
 
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token1), 1);
         vm.stopPrank();
 
@@ -746,75 +747,75 @@ contract VaultTest is Test {
     function testFork_ArbitrumDeposit() public {
         // This test is designed to run only with fork testing
         // Run with: forge test --match-test testFork_ArbitrumDeposit --fork-url <RPC_URL>
-        
+
         // Skip this test if we're running on local test environment (anvil chain ID 31337)
         if (block.chainid == 31337) {
             console.log("SKIPPED: Fork test requires --fork-url parameter");
             return;
         }
-        
+
         // We should already be on a fork if this test is running
         // Fork Arbitrum mainnet (this should work since we passed --fork-url)
         vm.createFork("https://arb1.arbitrum.io/rpc");
-        
+
         // Specific addresses from user request
         address vaultAddress = 0xc182792CC8E638224006Ef01E4995c27411Cf0E2;
         address walletAddress = 0x55b3d73e525227A7F0b25e28e17c1E94006A25dd;
-        
+
         // Create vault instance
         Vault forkVault = Vault(vaultAddress);
-        
+
         // Get vault owner to verify setup
         address vaultOwnerAddress = forkVault.vaultOwner();
         console.log("Vault owner:", vaultOwnerAddress);
         console.log("Wallet address:", walletAddress);
-        
+
         // Only proceed if the wallet is the vault owner
         if (vaultOwnerAddress != walletAddress) {
             console.log("ERROR: Wallet address is not the vault owner");
             return;
         }
-        
+
         // Test with specific USDC token on Arbitrum
         address token = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831; // USDC
         IERC20 tokenContract = IERC20(token);
-        
+
         console.log("\n--- Testing USDC token ---");
         console.log("Token address:", token);
-        
+
         vm.startPrank(walletAddress);
-            
+
         // Check wallet balance
         uint256 walletBalance = tokenContract.balanceOf(walletAddress);
         console.log("Wallet balance:", walletBalance);
-        
+
         if (walletBalance == 0) {
             console.log("ERROR: No USDC balance in wallet");
             vm.stopPrank();
             return;
         }
-        
+
         // Check current allowance
         uint256 currentAllowance = tokenContract.allowance(walletAddress, vaultAddress);
         console.log("Current allowance:", currentAllowance);
-        
+
         // Check vault balance before deposit
         uint256 vaultBalanceBefore = forkVault.getTokenBalance(token);
         console.log("Vault balance before:", vaultBalanceBefore);
-        
+
         // Try a small test deposit (1% of wallet balance or minimum 1 unit)
         uint256 depositAmount = walletBalance > 100 ? walletBalance / 100 : 1;
-        
+
         if (currentAllowance >= depositAmount) {
             console.log("Attempting deposit of:", depositAmount);
-            
+
             // Use vm.expectRevert to catch reverts properly
             bool success = true;
             try forkVault.deposit(token, depositAmount) {
                 // Verify deposit was successful
                 uint256 vaultBalanceAfter = forkVault.getTokenBalance(token);
                 console.log("Vault balance after:", vaultBalanceAfter);
-                
+
                 if (vaultBalanceAfter == vaultBalanceBefore + depositAmount) {
                     console.log("SUCCESS: Deposit completed successfully!");
                 } else {
@@ -831,11 +832,11 @@ contract VaultTest is Test {
         } else {
             console.log("NOTICE: Insufficient allowance for deposit");
             console.log("Required:", depositAmount, "Available:", currentAllowance);
-            
+
             // Test what happens if we try to approve more
             try tokenContract.approve(vaultAddress, depositAmount) {
                 console.log("SUCCESS: Approval transaction would succeed");
-                
+
                 // Now try the deposit
                 try forkVault.deposit(token, depositAmount) {
                     console.log("SUCCESS: Deposit after approval would succeed");
@@ -850,9 +851,9 @@ contract VaultTest is Test {
                 console.log("ERROR: Approval would fail with unknown error");
             }
         }
-        
+
         vm.stopPrank();
-        
+
         console.log("\n=== Fork Test Complete ===");
     }
 }
