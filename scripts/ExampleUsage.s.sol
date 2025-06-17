@@ -88,7 +88,7 @@ contract ExampleUsage is Script {
         // 4. Deploy User Vault (as user)
         vm.startBroadcast(user);
         
-        address userVault = factory.deployVault(user);
+        address userVault = factory.createVault(user);
         console.log("User vault deployed at:", userVault);
         
         vm.stopBroadcast();

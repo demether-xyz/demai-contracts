@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import "forge-std/Test.sol";
 import "../src/Vault.sol";
 import "../src/VaultFactory.sol";
+import "../src/interfaces/IVault.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -105,7 +106,7 @@ contract VaultTest is Test {
         VaultFactory factory = VaultFactory(address(factoryProxy));
 
         // Deploy vault through factory (this creates a proper BeaconProxy)
-        address vaultAddress = factory.deployVault(vaultOwner);
+        address vaultAddress = factory.createVault(vaultOwner);
         vault = Vault(vaultAddress);
 
         // Store factory reference for tests that need it
@@ -230,20 +231,20 @@ contract VaultTest is Test {
 
     function test_RevertDepositZeroAddress() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(IVault.ZeroAddress.selector);
         vault.deposit(address(0), 100 * 10 ** 18);
     }
 
     function test_RevertDepositZeroAmount() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(IVault.ZeroAmount.selector);
         vault.deposit(address(token1), 0);
     }
 
     function test_RevertDepositNotVaultOwner() public {
         vm.startPrank(user1);
         token1.approve(address(vault), 100 * 10 ** 18);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token1), 100 * 10 ** 18);
         vm.stopPrank();
     }
@@ -252,7 +253,7 @@ contract VaultTest is Test {
         vm.startPrank(factoryOwner);
         token1.mint(factoryOwner, 100 * 10 ** 18);
         token1.approve(address(vault), 100 * 10 ** 18);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token1), 100 * 10 ** 18);
         vm.stopPrank();
     }
@@ -364,13 +365,13 @@ contract VaultTest is Test {
 
     function test_RevertWithdrawZeroAddress() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(IVault.ZeroAddress.selector);
         vault.withdraw(address(0), 100 * 10 ** 18);
     }
 
     function test_RevertWithdrawZeroAmount() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(IVault.ZeroAmount.selector);
         vault.withdraw(address(token1), 0);
     }
 
@@ -383,7 +384,7 @@ contract VaultTest is Test {
 
         // Try to withdraw as different user
         vm.prank(user1);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.withdraw(address(token1), 50 * 10 ** 18);
     }
 
@@ -396,7 +397,7 @@ contract VaultTest is Test {
         token1.approve(address(vault), depositAmount);
         vault.deposit(address(token1), depositAmount);
 
-        vm.expectRevert(Vault.InsufficientBalance.selector);
+        vm.expectRevert(IVault.InsufficientBalance.selector);
         vault.withdraw(address(token1), withdrawAmount);
         vm.stopPrank();
     }
@@ -420,7 +421,7 @@ contract VaultTest is Test {
 
     function test_RevertWithdrawFromEmptyVault() public {
         vm.prank(vaultOwner);
-        vm.expectRevert(Vault.InsufficientBalance.selector);
+        vm.expectRevert(IVault.InsufficientBalance.selector);
         vault.withdraw(address(token1), 1);
     }
 
@@ -706,10 +707,10 @@ contract VaultTest is Test {
         for (uint i = 0; i < nonOwners.length; i++) {
             vm.startPrank(nonOwners[i]);
 
-            vm.expectRevert(Vault.OnlyVaultOwner.selector);
+            vm.expectRevert(IVault.OnlyVaultOwner.selector);
             vault.deposit(address(token1), 1);
 
-            vm.expectRevert(Vault.OnlyVaultOwner.selector);
+            vm.expectRevert(IVault.OnlyVaultOwner.selector);
             vault.withdraw(address(token1), 1);
 
             vm.stopPrank();
@@ -724,7 +725,7 @@ contract VaultTest is Test {
         testFactory.unpauseVault(address(vault));
         assertFalse(vault.paused());
 
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token1), 1);
         vm.stopPrank();
 

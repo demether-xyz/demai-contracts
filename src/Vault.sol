@@ -120,7 +120,7 @@ contract Vault is IVault, Initializable, ReentrancyGuardUpgradeable, OwnableUpgr
             if (approvals[i].token == address(0)) revert ZeroAddress();
             if (approvals[i].amount == 0) continue; // Skip zero approvals
             
-            IERC20(approvals[i].token).safeApprove(targetContract, approvals[i].amount);
+            IERC20(approvals[i].token).forceApprove(targetContract, approvals[i].amount);
             emit TokenApproved(approvals[i].token, targetContract, approvals[i].amount);
         }
 

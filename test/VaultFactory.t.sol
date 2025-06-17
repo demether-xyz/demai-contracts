@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import "forge-std/Test.sol";
 import "../src/VaultFactory.sol";
 import "../src/Vault.sol";
+import "../src/interfaces/IVault.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -56,7 +57,7 @@ contract VaultFactoryTest is Test {
     }
 
     function test_DeployVault() public {
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
 
         // Verify vault was deployed correctly
         assertTrue(vaultAddress != address(0));
@@ -78,7 +79,7 @@ contract VaultFactoryTest is Test {
         address predictedAddress = factory.predictVaultAddress(user1);
 
         // Deploy vault
-        address actualAddress = factory.deployVault(user1);
+        address actualAddress = factory.createVault(user1);
 
         // Verify addresses match
         assertEq(predictedAddress, actualAddress);
@@ -86,21 +87,21 @@ contract VaultFactoryTest is Test {
 
     function test_RevertDeployVaultZeroAddress() public {
         vm.expectRevert(VaultFactory.ZeroAddress.selector);
-        factory.deployVault(address(0));
+        factory.createVault(address(0));
     }
 
     function test_RevertVaultAlreadyExists() public {
         // First deployment should succeed
-        factory.deployVault(user1);
+        factory.createVault(user1);
 
         // Second deployment for same user should fail
         vm.expectRevert(VaultFactory.VaultAlreadyExists.selector);
-        factory.deployVault(user1);
+        factory.createVault(user1);
     }
 
     function test_VaultDepositAndWithdraw() public {
         // Deploy vault for user1
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
         Vault vault = Vault(vaultAddress);
 
         // Approve and deposit tokens as user1
@@ -123,18 +124,18 @@ contract VaultFactoryTest is Test {
     }
 
     function test_RevertDepositNotVaultOwner() public {
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
         Vault vault = Vault(vaultAddress);
 
         vm.startPrank(user2);
         token.approve(vaultAddress, 100 * 10 ** 18);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.deposit(address(token), 100 * 10 ** 18);
         vm.stopPrank();
     }
 
     function test_RevertWithdrawNotVaultOwner() public {
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
         Vault vault = Vault(vaultAddress);
 
         // First deposit as user1
@@ -145,12 +146,12 @@ contract VaultFactoryTest is Test {
 
         // Try to withdraw as user2
         vm.prank(user2);
-        vm.expectRevert(Vault.OnlyVaultOwner.selector);
+        vm.expectRevert(IVault.OnlyVaultOwner.selector);
         vault.withdraw(address(token), 50 * 10 ** 18);
     }
 
     function test_FactoryOwnerPauseVault() public {
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
         Vault vault = Vault(vaultAddress);
 
         // Factory owner pauses the vault
@@ -169,7 +170,7 @@ contract VaultFactoryTest is Test {
     }
 
     function test_FactoryOwnerUnpauseVault() public {
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
         Vault vault = Vault(vaultAddress);
 
         // Factory owner pauses then unpauses the vault
@@ -203,7 +204,7 @@ contract VaultFactoryTest is Test {
     }
 
     function test_RevertNonOwnerOperations() public {
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
 
         // Non-owner should not be able to pause vault
         vm.prank(user1);
@@ -219,8 +220,8 @@ contract VaultFactoryTest is Test {
 
     function test_MultipleVaults() public {
         // Deploy vaults for different users
-        address vault1 = factory.deployVault(user1);
-        address vault2 = factory.deployVault(user2);
+        address vault1 = factory.createVault(user1);
+        address vault2 = factory.createVault(user2);
 
         assertEq(factory.getTotalVaults(), 2);
 
@@ -243,7 +244,7 @@ contract VaultFactoryTest is Test {
         assertEq(factory.getUserVault(user1), address(0));
 
         // Deploy vault
-        factory.deployVault(user1);
+        factory.createVault(user1);
 
         // Now user has a vault
         assertTrue(factory.hasVault(user1));
@@ -263,7 +264,7 @@ contract VaultFactoryTest is Test {
 
         // Cannot deploy vault when factory is paused
         vm.expectRevert();
-        factory.deployVault(user1);
+        factory.createVault(user1);
     }
 
     function test_UnpauseFactory() public {
@@ -276,7 +277,7 @@ contract VaultFactoryTest is Test {
         assertFalse(factory.paused());
 
         // Can deploy vault after unpause
-        address vaultAddress = factory.deployVault(user1);
+        address vaultAddress = factory.createVault(user1);
         assertTrue(vaultAddress != address(0));
     }
 
