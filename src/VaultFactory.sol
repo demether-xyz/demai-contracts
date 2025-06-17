@@ -10,6 +10,7 @@ import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/Upgradea
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
+import { IVaultFactory } from "./interfaces/IVaultFactory.sol";
 
 /**
  * @title VaultFactory
@@ -18,8 +19,9 @@ import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
  * @dev Controls administrative functions (pause/unpause, upgrades) while users control their deposits/withdrawals
  * @dev Uses CREATE2 for deterministic vault addresses across chains
  * @dev Each user can only have one vault per chain
+ * @dev Manages single authorized manager for strategy execution
  */
-contract VaultFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     /// @dev The beacon contract that holds the implementation address
     UpgradeableBeacon public beacon;
 
@@ -32,11 +34,15 @@ contract VaultFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, Pau
     /// @dev Array of all deployed vaults
     address[] public allVaults;
 
+    /// @dev Single authorized manager who can execute strategies
+    address public authorizedManager;
+
     /// @dev Events
     event VaultDeployed(address indexed vaultOwner, address indexed vaultAddress, uint256 vaultIndex);
     event BeaconUpgraded(address indexed oldImplementation, address indexed newImplementation);
     event VaultPaused(address indexed vault);
     event VaultUnpaused(address indexed vault);
+    event ManagerSet(address indexed oldManager, address indexed newManager);
 
     /// @dev Errors
     error ZeroAddress();
@@ -68,11 +74,11 @@ contract VaultFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, Pau
     }
 
     /**
-     * @dev Deploys a new vault for a user using CREATE2 for deterministic address
+     * @dev Creates a new vault for a user using CREATE2 for deterministic address
      * @param vaultOwner The address that will own the vault (can deposit/withdraw)
-     * @return vaultAddress The address of the newly deployed vault
+     * @return The address of the newly deployed vault
      */
-    function deployVault(address vaultOwner) external nonReentrant whenNotPaused returns (address vaultAddress) {
+    function createVault(address vaultOwner) external nonReentrant whenNotPaused returns (address) {
         if (vaultOwner == address(0)) revert ZeroAddress();
         if (address(beacon) == address(0)) revert BeaconNotSet();
         if (userVault[vaultOwner] != address(0)) revert VaultAlreadyExists();
@@ -92,7 +98,7 @@ contract VaultFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, Pau
         bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(beacon), initData));
 
         // Deploy using CREATE2 for deterministic address
-        vaultAddress = Create2.deploy(0, salt, bytecode);
+        address vaultAddress = Create2.deploy(0, salt, bytecode);
 
         // Update mappings and arrays
         userVault[vaultOwner] = vaultAddress;
@@ -100,6 +106,27 @@ contract VaultFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, Pau
         allVaults.push(vaultAddress);
 
         emit VaultDeployed(vaultOwner, vaultAddress, allVaults.length - 1);
+        
+        return vaultAddress;
+    }
+
+    /**
+     * @dev Sets the authorized manager (only owner)
+     * @param newManager The address of the new authorized manager
+     */
+    function setManager(address newManager) external onlyOwner {
+        if (newManager == address(0)) revert ZeroAddress();
+        address oldManager = authorizedManager;
+        authorizedManager = newManager;
+        emit ManagerSet(oldManager, newManager);
+    }
+
+    /**
+     * @dev Gets the beacon address
+     * @return The beacon address
+     */
+    function getBeacon() external view returns (address) {
+        return address(beacon);
     }
 
     /**
@@ -108,7 +135,7 @@ contract VaultFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, Pau
      * @return The predicted vault address
      */
     function predictVaultAddress(address vaultOwner) external view returns (address) {
-        // Use the same salt logic as deployVault
+        // Use the same salt logic as createVault
         bytes32 salt = bytes32(uint256(uint160(vaultOwner)));
 
         // Encode the initialization data for the vault
@@ -211,14 +238,6 @@ contract VaultFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, Pau
     function getImplementation() external view returns (address) {
         if (address(beacon) == address(0)) return address(0);
         return beacon.implementation();
-    }
-
-    /**
-     * @dev Gets the beacon address
-     * @return The beacon address
-     */
-    function getBeacon() external view returns (address) {
-        return address(beacon);
     }
 
     /**
