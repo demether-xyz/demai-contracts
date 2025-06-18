@@ -9,7 +9,7 @@
     "prettier": "npx prettier --write '{test,scripts,script,src,tasks}/{**/*,*}.{js,ts,jsx,tsx,sol}'",
     "lint": "solhint --max-warnings 0 \"src/**/*.sol\"",
     "slither": "slither .",
-    "deploy": "./scripts/run.sh GetBeaconInfo.s.sol arbitrum"
+    "deploy": "./scripts/run.sh SetManager.s.sol arbitrum"
   },
   "dependencies": {
     "@layerzerolabs/eslint-config-next": "^3.0.66",
