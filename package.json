@@ -9,8 +9,9 @@
     "prettier": "npx prettier --write '{test,scripts,script,src,tasks}/{**/*,*}.{js,ts,jsx,tsx,sol}'",
     "lint": "solhint --max-warnings 0 \"src/**/*.sol\"",
     "slither": "slither .",
-    "deploy": "./scripts/run.sh DeployVaultFactory.s.sol arbitrum",
-    "script": "./scripts/run.sh SetManager.s.sol arbitrum"
+    "deploy": "./scripts/run.sh DeployVaultFactory.s.sol core",
+    "script": "./scripts/run.sh SetManager.s.sol core",
+    "other": "./scripts/run.sh PredictAddress.s.sol arbitrum"
   },
   "dependencies": {
     "@layerzerolabs/eslint-config-next": "^3.0.66",
@@ -25,8 +26,8 @@
     "@layerzerolabs/solhint-config": "^3.0.66",
     "@layerzerolabs/test-devtools-evm-foundry": "^6.0.0",
     "@layerzerolabs/toolbox-foundry": "^0.1.11",
-    "@openzeppelin/contracts": "^5.2.0",
-    "@openzeppelin/contracts-upgradeable": "^5.2.0",
+    "@openzeppelin/contracts": "^4.9.6",
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
     "eslint": "^9.19.0",
     "ethers": "^6.14.1",
     "prettier": "^3.4.2",

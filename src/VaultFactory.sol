@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.19;
 
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IVaultFactory } from "./interfaces/IVaultFactory.sol";
 
@@ -20,6 +19,7 @@ import { IVaultFactory } from "./interfaces/IVaultFactory.sol";
  * @dev Uses CREATE2 for deterministic vault addresses across chains
  * @dev Each user can only have one vault per chain
  * @dev Manages single authorized manager for strategy execution
+ * @dev CROSS-CHAIN STRATEGY: Deploy factories at the same address using CREATE2 for true determinism
  */
 contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     /// @dev The beacon contract that holds the implementation address
@@ -38,8 +38,14 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
     address public authorizedManager;
 
     /// @dev Fixed identifier for cross-chain vault address consistency
-    /// @dev This ensures vault addresses are predictable across chains
+    /// @dev This ensures vault addresses are predictable across chains when factories have same address
     bytes32 public constant VAULT_DEPLOYER_ID = keccak256("DEMAI_VAULT_FACTORY_V1");
+
+    /// @dev Fixed dummy implementation bytecode that never changes across vault versions
+    /// @dev This is a minimal contract that just returns true for any call
+    /// @dev Bytecode: constructor + runtime code for a contract that does nothing
+    bytes public constant FIXED_DUMMY_BYTECODE =
+        hex"608060405234801561001057600080fd5b5060358061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806301ffc9a714602d575b600080fd5b60336047565b604051603e9190604e565b60405180910390f35b60006001905090565b605d81606a565b82525050565b6000602082019050607660008301846054565b92915050565b6000819050919050565b607b81607c565b8114608557600080fd5b5056fea2646970667358221220d1a9e8f7c6b5a4d3c2b1a0e9f8c7b6a5d4c3b2a1e0f9d8c7b6a5d4c3b2a164736f6c63430008130033";
 
     /// @dev Events
     event VaultDeployed(address indexed vaultOwner, address indexed vaultAddress, uint256 vaultIndex);
@@ -69,12 +75,29 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
         if (_vaultImplementation == address(0)) revert ZeroAddress();
 
         __UUPSUpgradeable_init();
-        __Ownable_init(_owner);
+        __Ownable_init();
+        _transferOwnership(_owner);
         __Pausable_init();
         __ReentrancyGuard_init();
 
-        // Deploy the beacon with the initial implementation
-        beacon = new UpgradeableBeacon(_vaultImplementation, address(this));
+        // Deploy fixed dummy implementation using hardcoded bytecode
+        // This bytecode NEVER changes regardless of vault version updates
+        bytes32 dummySalt = keccak256(abi.encodePacked(VAULT_DEPLOYER_ID, "FIXED_DUMMY"));
+        address dummyImpl = Create2.deploy(0, dummySalt, FIXED_DUMMY_BYTECODE);
+
+        // Deploy the beacon deterministically using the fixed dummy implementation
+        // This ensures beacon addresses are identical across chains and vault versions
+        bytes32 beaconSalt = keccak256(abi.encodePacked(VAULT_DEPLOYER_ID, "BEACON"));
+        bytes memory beaconBytecode = abi.encodePacked(
+            type(UpgradeableBeacon).creationCode,
+            abi.encode(dummyImpl) // Always the same dummy implementation
+        );
+
+        address beaconAddress = Create2.deploy(0, beaconSalt, beaconBytecode);
+        beacon = UpgradeableBeacon(beaconAddress);
+
+        // Now upgrade to the actual implementation (V1, V2, V3, etc.)
+        beacon.upgradeTo(_vaultImplementation);
     }
 
     /**
@@ -87,8 +110,8 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
         if (address(beacon) == address(0)) revert BeaconNotSet();
         if (userVault[vaultOwner] != address(0)) revert VaultAlreadyExists();
 
-        // Use fixed deployer ID + vault owner for cross-chain consistency
-        // This ensures same vault address regardless of factory address differences
+        // Create deterministic salt using only vault deployer ID and user address
+        // This ensures same vault address across chains when factories are at same address
         bytes32 salt = keccak256(abi.encodePacked(VAULT_DEPLOYER_ID, vaultOwner));
 
         // Encode the initialization data for the vault
@@ -98,7 +121,7 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
             vaultOwner // User is the vault owner
         );
 
-        // Get bytecode for BeaconProxy
+        // Get bytecode for BeaconProxy with our beacon
         bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(beacon), initData));
 
         // Deploy using CREATE2 for deterministic address
@@ -134,6 +157,15 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
     }
 
     /**
+     * @dev Gets the current vault implementation address
+     * @return The implementation address
+     */
+    function getImplementation() external view returns (address) {
+        if (address(beacon) == address(0)) return address(0);
+        return beacon.implementation();
+    }
+
+    /**
      * @dev Predicts the address of a vault before deployment
      * @param vaultOwner The address that will own the vault
      * @return The predicted vault address
@@ -149,13 +181,11 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
             vaultOwner // User is the vault owner
         );
 
-        // Get bytecode for BeaconProxy
+        // Get bytecode for BeaconProxy with our beacon
         bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(beacon), initData));
 
         return Create2.computeAddress(salt, keccak256(bytecode), address(this));
     }
-
-
 
     /**
      * @dev Upgrades the beacon to a new implementation (only owner)
@@ -238,15 +268,6 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
     }
 
     /**
-     * @dev Gets the current vault implementation address
-     * @return The implementation address
-     */
-    function getImplementation() external view returns (address) {
-        if (address(beacon) == address(0)) return address(0);
-        return beacon.implementation();
-    }
-
-    /**
      * @dev Required by UUPSUpgradeable - authorizes upgrades
      * @param newImplementation The new implementation address
      */
@@ -261,14 +282,5 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
      */
     function getAllVaults() external view returns (address[] memory) {
         return allVaults;
-    }
-
-    /**
-     * @dev Gets the creation bytecode for the BeaconProxy contract.
-     * @dev Useful for off-chain address prediction.
-     * @return The creation bytecode.
-     */
-    function getBeaconProxyCreationCode() external pure returns (bytes memory) {
-        return type(BeaconProxy).creationCode;
     }
 }

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
 import "../src/VaultFactory.sol";
 
 contract SetManager is Script {
     // UPDATE THESE CONSTANTS BEFORE RUNNING
-    address constant VAULT_FACTORY_ADDRESS = 0x577264F9fC6595ae64d82d5a80a4Bc0c01d30135; // Update with your VaultFactory proxy address
+    address constant VAULT_FACTORY_ADDRESS = 0x4623C2D0f91D08654384391174fb8FD7C70BCF31; // VaultFactory PROXY address (from latest deployment)
     address constant NEW_MANAGER_ADDRESS = 0x55b3d73e525227A7F0b25e28e17c1E94006A25dd; // Update with the new manager address
 
     function run() external {
@@ -37,7 +37,7 @@ contract SetManager is Script {
         address currentOwner = vaultFactory.owner();
         console.log("Current Owner:");
         console.logAddress(currentOwner);
-        
+
         if (currentOwner != deployer) {
             console.log("ERROR: Deployer is not the owner of the VaultFactory");
             revert("Deployer is not the owner");
@@ -74,4 +74,4 @@ contract SetManager is Script {
         console.log("New Manager:      ", newManager);
         console.log("VaultFactory:     ", vaultFactoryAddress);
     }
-} 
+}

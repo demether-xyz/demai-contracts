@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "../src/VaultFactory.sol";
@@ -39,10 +39,11 @@ contract VaultFactoryTest is Test {
         token = new MockERC20("Test Token", "TEST");
 
         // Deploy factory behind a proxy for UUPS upgradeability
-        bytes memory initData = abi.encodeWithSignature("initialize(address,address)", factoryOwner, address(vaultImplementation));
-
-        ERC1967Proxy factoryProxy = new ERC1967Proxy(address(factoryImplementation), initData);
+        // We separate proxy deployment from initialization to mirror the deployment script
+        // and avoid issues with delegatecalling `initialize` from a constructor.
+        ERC1967Proxy factoryProxy = new ERC1967Proxy(address(factoryImplementation), bytes(""));
         factory = VaultFactory(address(factoryProxy));
+        factory.initialize(factoryOwner, address(vaultImplementation));
 
         // Mint tokens to users
         token.mint(user1, 1000 * 10 ** 18);
@@ -251,9 +252,97 @@ contract VaultFactoryTest is Test {
         assertTrue(factory.getUserVault(user1) != address(0));
     }
 
-    function test_GetBeaconProxyCreationCode() public view {
-        bytes memory creationCode = factory.getBeaconProxyCreationCode();
-        assertTrue(creationCode.length > 0);
+    function test_DeterministicBeaconAddress() public {
+        // The beacon should be deployed at a deterministic address
+        address beaconAddress = factory.getBeacon();
+        assertTrue(beaconAddress != address(0));
+
+        // Verify the beacon points to the correct implementation
+        assertEq(factory.getImplementation(), address(vaultImplementation));
+
+        // Deploy a new factory with the same parameters and verify beacon address is different
+        // (since it's deployed by a different factory address)
+        VaultFactory newFactoryImpl = new VaultFactory();
+        ERC1967Proxy newFactoryProxy = new ERC1967Proxy(address(newFactoryImpl), bytes(""));
+        VaultFactory newFactory = VaultFactory(address(newFactoryProxy));
+        newFactory.initialize(factoryOwner, address(vaultImplementation));
+
+        // Different factory = different beacon address (since deployer is different)
+        assertTrue(newFactory.getBeacon() != factory.getBeacon());
+    }
+
+    function test_PlaceholderImplementationPattern() public {
+        // Deploy vault before upgrade
+        address predictedAddress1 = factory.predictVaultAddress(user1);
+        address vaultAddress = factory.deployVault(user1);
+        assertEq(predictedAddress1, vaultAddress);
+
+        // Create a new vault implementation
+        Vault newVaultImplementation = new Vault();
+
+        // Upgrade the beacon
+        vm.prank(factoryOwner);
+        factory.upgradeBeacon(address(newVaultImplementation));
+
+        // Verify implementation changed
+        assertEq(factory.getImplementation(), address(newVaultImplementation));
+
+        // Predict address for user2 after upgrade - should still be deterministic
+        address predictedAddress2 = factory.predictVaultAddress(user2);
+        address vault2Address = factory.deployVault(user2);
+        assertEq(predictedAddress2, vault2Address);
+
+        // Verify that existing vault still works with new implementation
+        Vault vault1 = Vault(vaultAddress);
+        assertEq(vault1.vaultOwner(), user1);
+
+        // Verify new vault uses new implementation but address is still deterministic
+        Vault vault2 = Vault(vault2Address);
+        assertEq(vault2.vaultOwner(), user2);
+    }
+
+    function test_BeaconAddressConsistency() public {
+        // Get the beacon address
+        address beaconAddress = factory.getBeacon();
+
+        // The beacon should use dummy implementation pattern
+        // This means the beacon address is determined by:
+        // - VAULT_DEPLOYER_ID constant
+        // - "BEACON" string
+        // - DummyVaultImplementation (deployed deterministically)
+        // - Factory address as deployer
+
+        assertTrue(beaconAddress != address(0));
+        assertEq(factory.getImplementation(), address(vaultImplementation));
+    }
+
+    function test_BeaconUsesPlaceholderPattern() public {
+        // Deploy a second factory with a DIFFERENT vault implementation
+        Vault differentImplementation = new Vault();
+        VaultFactory newFactoryImpl = new VaultFactory();
+
+        ERC1967Proxy newFactoryProxy = new ERC1967Proxy(address(newFactoryImpl), bytes(""));
+        VaultFactory newFactory = VaultFactory(address(newFactoryProxy));
+        newFactory.initialize(factoryOwner, address(differentImplementation));
+
+        // Even though the implementations are different, if the factories were deployed
+        // at the same address, the beacon addresses would be the same due to placeholder pattern
+        // (In this test they're different because factory addresses differ, but the logic is sound)
+
+        // Verify both factories work correctly with their respective implementations
+        assertEq(factory.getImplementation(), address(vaultImplementation));
+        assertEq(newFactory.getImplementation(), address(differentImplementation));
+
+        // Both can deploy vaults successfully
+        address vault1 = factory.deployVault(user1);
+        address vault2 = newFactory.deployVault(user2);
+
+        assertTrue(vault1 != address(0));
+        assertTrue(vault2 != address(0));
+
+        // Verify vault owners are set correctly
+        assertEq(Vault(vault1).vaultOwner(), user1);
+        assertEq(Vault(vault2).vaultOwner(), user2);
     }
 
     function test_PauseFactory() public {

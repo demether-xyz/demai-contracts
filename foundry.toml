@@ -14,6 +14,7 @@ libs = [
 via_ir = false
 optimizer = true
 optimizer_runs = 20000
+solc = "0.8.19"
 
 # Add fs permissions for the deployments directory
 fs_permissions = [{ access = "read-write", path = "./deployments"}]
@@ -40,7 +41,8 @@ libs = [
 ]
 via_ir = true
 optimizer = true
-optimizer_runs = 5
+optimizer_runs = 1000
+solc = "0.8.19"
 
 [rpc_endpoints]
 testnet = "${TESTNET_RPC_URL}"

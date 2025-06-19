@@ -5,7 +5,7 @@ set -e
 if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Error: Script name or chain not provided"
     echo "Usage: ./scripts/run.sh <ScriptName.s.sol> <chain_name>"
-    echo "Available chains: mainnet, sepolia, polygon, arbitrum, optimism, base"
+    echo "Available chains: mainnet, sepolia, polygon, arbitrum, optimism, base, local, local-5000"
     exit 1
 fi
 
@@ -32,9 +32,12 @@ fi
 
 # Define RPC URLs for different chains using environment variables or fallback defaults
 declare -A RPC_URLS=(
+    ["local"]="${LOCAL_RPC_URL:-http://127.0.0.1:8545}"
+    ["local-5000"]="${LOCAL_5000_RPC_URL:-http://127.0.0.1:5000}"
     ["mainnet"]="${MAINNET_RPC_URL:-https://eth.llamarpc.com}"
     ["arbitrum"]="${ARBITRUM_RPC_URL:-https://arb-mainnet.g.alchemy.com/v2/ESrlxBQxB17StnQQKuXeV8V1o4G5aLuW}"
     ["base"]="${BASE_RPC_URL:-https://mainnet.base.org}"
+    ["core"]="${CORE_RPC_URL:-https://rpc.coredao.org}"
 )
 
 # Get the chain name from second parameter
@@ -50,13 +53,20 @@ fi
 # Get RPC URL for the specified chain
 RPC_URL="${RPC_URLS[$CHAIN_NAME]}"
 
+if [ "$CHAIN_NAME" = "local" ] || [ "$CHAIN_NAME" = "local-5000" ]; then
+    echo "Waiting for local node to start..."
+    sleep 3
+fi
+
 echo "Deploying to chain: $CHAIN_NAME"
 echo "Using RPC URL: $RPC_URL"
-
-
 
 # Extract contract name from script filename (remove .s.sol extension)
 CONTRACT_NAME=$(basename "$1" .s.sol)
 
 # Run the script with deploy profile for better optimization
-FOUNDRY_PROFILE=deploy forge script "scripts/$1" --tc "$CONTRACT_NAME" --rpc-url "$RPC_URL" --broadcast --ffi -vvv
+if [ "$CHAIN_NAME" = "local" ] || [ "$CHAIN_NAME" = "local-5000" ]; then
+    FOUNDRY_PROFILE=deploy forge script "scripts/$1" --tc "$CONTRACT_NAME" --rpc-url "$RPC_URL" --broadcast --ffi --gas-price 100 -vvv
+else
+    FOUNDRY_PROFILE=deploy forge script "scripts/$1" --tc "$CONTRACT_NAME" --rpc-url "$RPC_URL" --broadcast --ffi -vvv
+fi
