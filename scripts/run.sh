@@ -65,7 +65,9 @@ echo "Using RPC URL: $RPC_URL"
 CONTRACT_NAME=$(basename "$1" .s.sol)
 
 # Run the script with deploy profile for better optimization
-if [ "$CHAIN_NAME" = "local" ] || [ "$CHAIN_NAME" = "local-5000" ]; then
+if [ "$1" = "PredictAddress.s.sol" ]; then
+    FOUNDRY_PROFILE=deploy forge script "scripts/$1" --tc "$CONTRACT_NAME" --rpc-url "$RPC_URL" --ffi -vvv
+elif [ "$CHAIN_NAME" = "local" ] || [ "$CHAIN_NAME" = "local-5000" ]; then
     FOUNDRY_PROFILE=deploy forge script "scripts/$1" --tc "$CONTRACT_NAME" --rpc-url "$RPC_URL" --broadcast --ffi --gas-price 100 -vvv
 else
     FOUNDRY_PROFILE=deploy forge script "scripts/$1" --tc "$CONTRACT_NAME" --rpc-url "$RPC_URL" --broadcast --ffi -vvv

@@ -10,7 +10,7 @@
     "lint": "solhint --max-warnings 0 \"src/**/*.sol\"",
     "slither": "slither .",
     "deploy": "./scripts/run.sh DeployVaultFactory.s.sol core",
-    "script": "./scripts/run.sh SetManager.s.sol core",
+    "script": "./scripts/run.sh SetManager.s.sol arbitrum",
     "other": "./scripts/run.sh PredictAddress.s.sol arbitrum"
   },
   "dependencies": {

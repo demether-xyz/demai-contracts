@@ -4,10 +4,10 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import "../src/VaultFactory.sol";
 
-contract PredictVaultAddress is Script {
+contract PredictAddress is Script {
     function run() external view {
-        address factoryAddress = 0x516D43C6398aea419806b9f3Ae84701b0c0486a3;
-        address userAddress = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+        address factoryAddress = 0x5C97F0a08a1c8a3Ed6C1E1dB2f7Ce08a4BFE53C7;
+        address userAddress = 0x55b3d73e525227A7F0b25e28e17c1E94006A25dd;
 
         VaultFactory factory = VaultFactory(factoryAddress);
         address predictedVault = factory.predictVaultAddress(userAddress);
