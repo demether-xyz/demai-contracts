@@ -6,7 +6,7 @@ import "../src/VaultFactory.sol";
 
 contract SetManager is Script {
     // UPDATE THESE CONSTANTS BEFORE RUNNING
-    address constant VAULT_FACTORY_ADDRESS = 0x6680952dc4Cf017eb31CB98c2112CA38171982d3; // Update with your VaultFactory proxy address
+    address constant VAULT_FACTORY_ADDRESS = 0x577264F9fC6595ae64d82d5a80a4Bc0c01d30135; // Update with your VaultFactory proxy address
     address constant NEW_MANAGER_ADDRESS = 0x55b3d73e525227A7F0b25e28e17c1E94006A25dd; // Update with the new manager address
 
     function run() external {

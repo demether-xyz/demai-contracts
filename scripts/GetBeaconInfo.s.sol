@@ -9,7 +9,7 @@ contract GetBeaconInfo is Script {
         console.log("=== Getting Beacon Information ===");
 
         // VaultFactory proxy address from latest deployment
-        address vaultFactoryProxy = 0x6680952dc4Cf017eb31CB98c2112CA38171982d3;
+        address vaultFactoryProxy = 0x577264F9fC6595ae64d82d5a80a4Bc0c01d30135;
 
         console.log("Chain ID:");
         console.logUint(block.chainid);

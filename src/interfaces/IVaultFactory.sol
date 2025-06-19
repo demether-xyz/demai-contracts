@@ -17,4 +17,7 @@ interface IVaultFactory {
 
     /// @dev Gets the beacon address
     function getBeacon() external view returns (address);
+
+    /// @dev Predicts the vault address before deployment
+    function predictVaultAddress(address vaultOwner) external view returns (address);
 }

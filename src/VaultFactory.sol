@@ -37,6 +37,10 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
     /// @dev Single authorized manager who can execute strategies
     address public authorizedManager;
 
+    /// @dev Fixed identifier for cross-chain vault address consistency
+    /// @dev This ensures vault addresses are predictable across chains
+    bytes32 public constant VAULT_DEPLOYER_ID = keccak256("DEMAI_VAULT_FACTORY_V1");
+
     /// @dev Events
     event VaultDeployed(address indexed vaultOwner, address indexed vaultAddress, uint256 vaultIndex);
     event BeaconUpgraded(address indexed oldImplementation, address indexed newImplementation);
@@ -83,9 +87,9 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
         if (address(beacon) == address(0)) revert BeaconNotSet();
         if (userVault[vaultOwner] != address(0)) revert VaultAlreadyExists();
 
-        // Use address-only salt for cross-chain consistency
-        // This means one vault per user, but same address on all chains
-        bytes32 salt = bytes32(uint256(uint160(vaultOwner)));
+        // Use fixed deployer ID + vault owner for cross-chain consistency
+        // This ensures same vault address regardless of factory address differences
+        bytes32 salt = keccak256(abi.encodePacked(VAULT_DEPLOYER_ID, vaultOwner));
 
         // Encode the initialization data for the vault
         bytes memory initData = abi.encodeWithSignature(
@@ -135,8 +139,8 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
      * @return The predicted vault address
      */
     function predictVaultAddress(address vaultOwner) external view returns (address) {
-        // Use the same salt logic as createVault
-        bytes32 salt = bytes32(uint256(uint160(vaultOwner)));
+        // Use the same salt logic as deployVault
+        bytes32 salt = keccak256(abi.encodePacked(VAULT_DEPLOYER_ID, vaultOwner));
 
         // Encode the initialization data for the vault
         bytes memory initData = abi.encodeWithSignature(
@@ -150,6 +154,8 @@ contract VaultFactory is IVaultFactory, Initializable, UUPSUpgradeable, OwnableU
 
         return Create2.computeAddress(salt, keccak256(bytecode), address(this));
     }
+
+
 
     /**
      * @dev Upgrades the beacon to a new implementation (only owner)
