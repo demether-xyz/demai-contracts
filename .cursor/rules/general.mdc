@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# General
+
+- When running scripts use pattern: ./scripts/run.sh NAME.s.sol networkname

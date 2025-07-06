@@ -16,8 +16,11 @@ optimizer = true
 optimizer_runs = 20000
 solc = "0.8.19"
 
-# Add fs permissions for the deployments directory
-fs_permissions = [{ access = "read-write", path = "./deployments"}]
+# Add fs permissions for the deployments and scripts directories
+fs_permissions = [
+    { access = "read-write", path = "./deployments"},
+    { access = "read", path = "./scripts"}
+]
 
 remappings = [
     # Due to a misconfiguration of solidity-bytes-utils, an outdated version
