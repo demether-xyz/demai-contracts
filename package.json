@@ -10,7 +10,7 @@
     "lint": "solhint --max-warnings 0 \"src/**/*.sol\"",
     "slither": "slither .",
     "deploy": "./scripts/run.sh DeployVaultFactory.s.sol core",
-    "script": "./scripts/run.sh UpgradeVault.s.sol arbitrum",
+    "script": "./scripts/run.sh UpgradeVault.s.sol core",
     "other": "./scripts/run.sh PredictAddress.s.sol arbitrum"
   },
   "dependencies": {

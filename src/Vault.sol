@@ -147,4 +147,19 @@ contract Vault is IVault, Initializable, ReentrancyGuardUpgradeable, OwnableUpgr
     function getFactory() external view returns (address) {
         return owner();
     }
+
+    /**
+     * @dev Approves tokens to a spender (only authorized manager)
+     * @notice This function allows pre-approving tokens to protocols before strategy execution
+     * @param token The token to approve
+     * @param spender The address to approve tokens to
+     * @param amount The amount to approve
+     */
+    function approveToken(address token, address spender, uint256 amount) external onlyAuthorizedManager whenNotPaused {
+        if (token == address(0)) revert ZeroAddress();
+        if (spender == address(0)) revert ZeroAddress();
+        
+        IERC20(token).forceApprove(spender, amount);
+        emit TokenApproved(token, spender, amount);
+    }
 }
