@@ -34,6 +34,7 @@ interface IVault {
     function pause() external;
     function unpause() external;
     function getTokenBalance(address token) external view returns (uint256);
+    function getMultipleTokenBalances(address[] calldata tokens) external view returns (uint256[] memory balances);
     function getFactory() external view returns (address);
     function vaultOwner() external view returns (address);
     function approveToken(address token, address spender, uint256 amount) external;

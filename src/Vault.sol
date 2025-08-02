@@ -141,6 +141,23 @@ contract Vault is IVault, Initializable, ReentrancyGuardUpgradeable, OwnableUpgr
     }
 
     /**
+     * @dev Gets the vault's balances for multiple tokens in a single call
+     * @param tokens Array of token addresses to query
+     * @return balances Array of balances corresponding to each token
+     */
+    function getMultipleTokenBalances(address[] calldata tokens) external view returns (uint256[] memory balances) {
+        balances = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] == address(0)) {
+                balances[i] = address(this).balance; // Native token balance
+            } else {
+                balances[i] = IERC20(tokens[i]).balanceOf(address(this));
+            }
+        }
+        return balances;
+    }
+
+    /**
      * @dev Gets the factory address
      * @return The factory address
      */
