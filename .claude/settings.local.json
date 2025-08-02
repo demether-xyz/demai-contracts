@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.akka.finance)",
+      "Bash(forge test:*)",
+      "Bash(rm:*)",
+      "WebFetch(domain:router.akka.finance)"
+    ],
+    "deny": []
+  }
+}
