@@ -9,7 +9,8 @@
     "prettier": "npx prettier --write '{test,scripts,script,src,tasks}/{**/*,*}.{js,ts,jsx,tsx,sol}'",
     "lint": "solhint --max-warnings 0 \"src/**/*.sol\"",
     "slither": "slither .",
-    "script": "./scripts/run.sh UpgradeVault.s.sol arbitrum",
+    "deploy": "./scripts/run.sh DeployVaultFactory.s.sol katana",
+    "script": "./scripts/run.sh SetManager.s.sol arbitrum",
     "other": "./scripts/run.sh PredictAddress.s.sol arbitrum"
   },
   "dependencies": {

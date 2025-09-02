@@ -5,7 +5,7 @@ set -e
 if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Error: Script name or chain not provided"
     echo "Usage: ./scripts/run.sh <ScriptName.s.sol> <chain_name>"
-    echo "Available chains: mainnet, sepolia, polygon, arbitrum, optimism, base, local, local-5000"
+    echo "Available chains: mainnet, sepolia, polygon, arbitrum, optimism, base, core, katana, local, local-5000"
     exit 1
 fi
 
@@ -38,6 +38,7 @@ declare -A RPC_URLS=(
     ["arbitrum"]="${ARBITRUM_RPC_URL:-https://arb-mainnet.g.alchemy.com/v2/ESrlxBQxB17StnQQKuXeV8V1o4G5aLuW}"
     ["base"]="${BASE_RPC_URL:-https://mainnet.base.org}"
     ["core"]="${CORE_RPC_URL:-https://rpc.coredao.org}"
+    ["katana"]="${KATANA_RPC_URL:-https://rpc.katana.network}"
 )
 
 # Get the chain name from second parameter
