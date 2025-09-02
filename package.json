@@ -10,7 +10,7 @@
     "lint": "solhint --max-warnings 0 \"src/**/*.sol\"",
     "slither": "slither .",
     "deploy": "./scripts/run.sh DeployVaultFactory.s.sol katana",
-    "script": "./scripts/run.sh SetManager.s.sol arbitrum",
+    "script": "./scripts/run.sh UpgradeVault.s.sol katana",
     "other": "./scripts/run.sh PredictAddress.s.sol arbitrum"
   },
   "dependencies": {
