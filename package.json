@@ -9,7 +9,7 @@
     "prettier": "npx prettier --write '{test,scripts,script,src,tasks}/{**/*,*}.{js,ts,jsx,tsx,sol}'",
     "lint": "solhint --max-warnings 0 \"src/**/*.sol\"",
     "slither": "slither .",
-    "deploy": "./scripts/run.sh DeployVaultFactory.s.sol katana",
+    "deploy": "./scripts/run.sh SetManager.s.sol katana",
     "script": "./scripts/run.sh UpgradeVault.s.sol katana",
     "other": "./scripts/run.sh PredictAddress.s.sol arbitrum"
   },
